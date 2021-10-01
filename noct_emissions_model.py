@@ -71,11 +71,12 @@ df_loans = df_loans.sort_values(by='Start Block', ignore_index = True)
 df_loans['Block'] = df_loans['Start Block']
 df_loans['Loan No.'] = df_loans.index+1
 
+
 # Blocks Dataframe
 blockCount = np.arange(quarterlyBlocks)
 df_blocks = pd.DataFrame({'Block': blockCount})
-df_blocks = df_blocks.set_index('Block')
-df_blocks.index = df_blocks.index.astype(int)
+#df_blocks = df_blocks.set_index('Block')
+#df_blocks.index = df_blocks.index.astype(int)
 
 # Simulated ETH/USDC Array (IMPROVE)
 radians = 22*np.pi
@@ -115,19 +116,56 @@ df_loans['Liquidation Threshold (ETH/USDC)'] = df_loans['Start Block ETH/USDC']*
 # Need Max Possible Accrued Interest Columns
 df_loans['Max Accrued Interest'] = df_loans['Loan Amount']*df_loans['Interest Rate']
 
+print(df_loans.shape[0])
+
 # Need Liquidation Block of Each Loan
-df_loans['Liquidation Block'] = [df_blocks.index[df_blocks['ETH/USDC'] < threshold].min() for threshold in df_loans['Liquidation Threshold (ETH/USDC)']]
+df_loans['Liquidation Block'] = [df_blocks.index[(df_blocks['ETH/USDC'] < df_loans['Liquidation Threshold (ETH/USDC)'][i]) & (df_blocks['Block'] > df_loans['Start Block'][i]) & (df_blocks['Block'] < df_loans['Retire Block'][i])].min() for i in range(df_loans.shape[0])]
 
 # Need Sum of Max Accrued Interest for Active Loans at Loan Start Block
-df_loans['Active Loans Max Accrued Interest'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > block) & (df_loans['Retire Block'] > block)) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > block)) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > block)) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < block)].sum() for block in df_loans['Start Block']]
+df_loans['Active Loans Max Accrued Interest (Start)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Start Block'][i]) & (df_loans['Retire Block'] > df_loans['Start Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Start Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Start Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Start Block'][i])].sum() for i in range(df_loans.shape[0])]
+
+# Need Sum of Max Accrued Interest for Active Loans at Loan Liquidation Block
+df_loans['Active Loans Max Accrued Interest (Liquidation)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Liquidation Block'][i]) & (df_loans['Retire Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Liquidation Block'][i])].sum() for i in range(df_loans.shape[0])]
+
+# Need Sum of Max Accrued Interest for Active Loans at Loan Retire Block
+df_loans['Active Loans Max Accrued Interest (Retire)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Retire Block'][i]) & (df_loans['Retire Block'] > df_loans['Retire Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Retire Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Retire Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Retire Block'][i])].sum() for i in range(df_loans.shape[0])]
 
 # Need Active Loans Count at Loan Start Block
-df_loans['Active Loans Count'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > block) & (df_loans['Retire Block'] > block)) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > block)) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > block)) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < block)].size for block in df_loans['Start Block']]
+df_loans['Active Loans Count (Start)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Start Block'][i]) & (df_loans['Retire Block'] > df_loans['Start Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Start Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Start Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Start Block'][i])].size for i in range(df_loans.shape[0])]
+
+# Need Active Loans Count at Loan Liquidation Block
+df_loans['Active Loans Count (Liquidation)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Liquidation Block'][i]) & (df_loans['Retire Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Liquidation Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Liquidation Block'][i])].size for i in range(df_loans.shape[0])]
+
+# Need Active Loans Count at Loan Retire Block
+df_loans['Active Loans Count (Retire)'] = [df_loans['Max Accrued Interest'][(((df_loans['Liquidation Block'] > df_loans['Retire Block'][i]) & (df_loans['Retire Block'] > df_loans['Retire Block'][i])) | ((df_loans['Liquidation Block'].isnull()) & (df_loans['Retire Block'] > df_loans['Retire Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'] > df_loans['Retire Block'][i])) | ((df_loans['Retire Block'].isnull()) & (df_loans['Liquidation Block'].isnull()))) & (df_loans['Start Block'] < df_loans['Retire Block'][i])].size for i in range(df_loans.shape[0])]
 
 # NOCT Dataframe
-df_loans_merge = df_loans.set_index('Block')
-df_loans_merge.index = df_loans_merge.index.astype(int)
-df_NOCT = pd.merge(df_blocks, df_loans_merge[['Active Loans Max Accrued Interest','Active Loans Count']], left_index=True, right_index=True, how='outer')
+df_loans_merge_start = df_loans.set_index('Start Block')
+df_loans_merge_start.index = df_loans_merge_start.index.astype(int)
+
+df_loans_merge_liquidation = df_loans
+df_loans_merge_liquidation = df_loans_merge_liquidation.dropna()
+df_loans_merge_liquidation = df_loans_merge_liquidation.set_index('Liquidation Block')
+df_loans_merge_liquidation.index = df_loans_merge_liquidation.index.astype(int)
+
+df_loans_merge_retire = df_loans
+df_loans_merge_retire = df_loans_merge_retire.dropna()
+df_loans_merge_retire = df_loans.set_index('Retire Block')
+df_loans_merge_retire.index = df_loans_merge_retire.index.astype(int)
+
+df_NOCT = pd.merge(df_blocks, df_loans_merge_start[['Active Loans Max Accrued Interest (Start)','Active Loans Count (Start)']], left_index=True, right_index=True, how='outer')
+df_NOCT = pd.merge(df_NOCT, df_loans_merge_liquidation[['Active Loans Max Accrued Interest (Liquidation)','Active Loans Count (Liquidation)']], left_index=True, right_index=True, how='outer')
+df_NOCT = pd.merge(df_NOCT, df_loans_merge_retire[['Active Loans Max Accrued Interest (Retire)','Active Loans Count (Retire)']], left_index=True, right_index=True, how='outer')
+
+df_NOCT = df_NOCT.drop_duplicates()
+df_NOCT = df_NOCT.drop(df_NOCT.index[df_blocks.shape[0]:])
+df_NOCT['Active Loans Max Accrued Interest'] = df_NOCT['Active Loans Max Accrued Interest (Start)']
+df_NOCT['Active Loans Max Accrued Interest'] = df_NOCT['Active Loans Max Accrued Interest'].fillna(df_NOCT['Active Loans Max Accrued Interest (Liquidation)'])
+df_NOCT['Active Loans Max Accrued Interest'] = df_NOCT['Active Loans Max Accrued Interest'].fillna(df_NOCT['Active Loans Max Accrued Interest (Retire)'])
+df_NOCT['Active Loans Count'] = df_NOCT['Active Loans Count (Start)']
+df_NOCT['Active Loans Count'] = df_NOCT['Active Loans Count'].fillna(df_NOCT['Active Loans Count (Liquidation)'])
+df_NOCT['Active Loans Count'] = df_NOCT['Active Loans Count'].fillna(df_NOCT['Active Loans Count (Retire)'])
+df_NOCT.to_csv('~/Documents/nocturnal_models/df_NOCT.csv', index=True)
 df_NOCT = df_NOCT.ffill(axis=0)
 
 # Need Loans' Total Earned NOCT ((loanMaxInterest*loanActiveBlockCount/sum_totalMaxInterest_per_block)*blockNOCT*loanActiveBlockCount)
