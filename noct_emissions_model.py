@@ -36,7 +36,7 @@ blockNOCT = quarterlyNOCT/quarterlyBlocks
 liqPenalty = .05
 
 # Model Variables
-loanCount = 1000
+loanCount = 2000
 loanAmountMin = 5000
 loanAmountMax = 50000
 loanAmounts = np.random.randint(loanAmountMin, loanAmountMax, loanCount)
